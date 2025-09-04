@@ -3,7 +3,8 @@ import os
 from openai import OpenAI
 import pandas as pd
 import matplotlib.pyplot as plt
-from template import TEMPLATE1
+from template import *
+import time
 
 load_dotenv()
 api_key = os.getenv("OPEN_API_KEY")
@@ -18,7 +19,7 @@ data_list = os.listdir("data/")
 # file_path = f"result/{data_name}"
 # os.makedirs(file_path, exist_ok=True)
 
-template = TEMPLATE1
+template = TEMPLATE3
 
 
 def chatbot(prompt):
@@ -29,6 +30,7 @@ def chatbot(prompt):
         ])
 
     text = response.choices[0].message.content
+    time.sleep(0.5)
     return text
 
 def run(data):
@@ -68,30 +70,37 @@ def run(data):
 
 plt.rc("font", family="Malgun Gothic")
 
-def draw_graph(data):
-    
+def draw_graph(data, file_name):
+
+    data_name = file_name.strip('.csv')
     data = data[["유형_예측", "극성_예측", "시제_예측", "확실성_예측"]]
     for col in data.columns:
         counts = data[col].value_counts()
         plt.figure(figsize=(5,3))
         counts.plot(kind='bar')
-        plt.title(f'예측형_긍정_과거_불확실 {col}의 분포')
+        plt.title(f'{data_name}_{col}의 분포')
         plt.xlabel(col)
         plt.ylabel('개수')
         plt.xticks(rotation=0)
-        plt.savefig(f"{file_path}/{data_num}_{col}_graph.png")
+        plt.savefig(f"{file_path}/{data_name}_{col}_graph.png")
         plt.close()
 
 if __name__ == "__main__":
 
-    
-    for i in range(len(data_list)):
-        data_num = data_list[i]
-        data_path = f"data/{data_num}"
-        data = pd.read_csv(data_path).reset_index(drop=False)
-        data_name = data_num.strip('.csv')
-        file_path = f"result/{data_name}"
-        os.makedirs(file_path, exist_ok=True)
+    # for i in range(len(data_list)):
+    #     data_num = data_list[i]
+    #     data_path = f"data/{data_num}"
+    #     data = pd.read_csv(data_path).reset_index(drop=False)
+    #     data_name = data_num.strip('.csv')
+    #     file_path = f"result/{data_name}"
+    #     os.makedirs(file_path, exist_ok=True)
 
-        result = run(data)
-        draw_graph(result)
+    #     result = run(data)
+    #     draw_graph(result, data_num)
+    data_num = "대화형_긍정_과거_불확실.csv"
+    data = pd.read_csv(f"data/{data_num}").reset_index(drop=False)
+    data_name = data_num.strip('.csv')
+    file_path = f"result/{data_name}"
+    os.makedirs(file_path, exist_ok=True)
+    result = run(data)
+    draw_graph(result, data_num)
