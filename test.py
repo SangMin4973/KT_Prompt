@@ -19,21 +19,23 @@ data_list = os.listdir("data/")
 # file_path = f"result/{data_name}"
 # os.makedirs(file_path, exist_ok=True)
 
-template = TEMPLATE3
-
+template = TEMPLATE4
 
 def chatbot(prompt):
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-4.1",
         messages=[
             {"role": "user", "content" : f"{template}\n\n 입력문:{prompt}"}
         ])
 
     text = response.choices[0].message.content
-    time.sleep(0.5)
+
     return text
 
 def run(data):
+
+    if len(data) > 50:
+        data = data.sample(n=50, random_state=42).reset_index(drop=True)
 
     sample_input = data['user_prompt']
     sample_output = data['output']
@@ -66,6 +68,7 @@ def run(data):
     
     length = len(result) * 4
     print(f"정확도: {sum/length*100}%")
+
     return df_result
 
 plt.rc("font", family="Malgun Gothic")
@@ -86,21 +89,20 @@ def draw_graph(data, file_name):
         plt.close()
 
 if __name__ == "__main__":
-
-    # for i in range(len(data_list)):
-    #     data_num = data_list[i]
-    #     data_path = f"data/{data_num}"
-    #     data = pd.read_csv(data_path).reset_index(drop=False)
-    #     data_name = data_num.strip('.csv')
-    #     file_path = f"result/{data_name}"
-    #     os.makedirs(file_path, exist_ok=True)
-
-    #     result = run(data)
-    #     draw_graph(result, data_num)
-    data_num = "대화형_긍정_과거_불확실.csv"
-    data = pd.read_csv(f"data/{data_num}").reset_index(drop=False)
-    data_name = data_num.strip('.csv')
-    file_path = f"result/{data_name}"
-    os.makedirs(file_path, exist_ok=True)
-    result = run(data)
-    draw_graph(result, data_num)
+    data_list = [s for s in data_list if "긍정" in s]
+    for i in range(len(data_list)):
+        data_num = data_list[i]
+        data_path = f"data/{data_num}"
+        data = pd.read_csv(data_path).reset_index(drop=False)
+        data_name = data_num.strip('.csv')
+        file_path = f"result/{data_name}"
+        os.makedirs(file_path, exist_ok=True)
+        result = run(data)
+        draw_graph(result, data_num)
+    # data_num = "추론형_긍정_현재_확실.csv"
+    # data = pd.read_csv(f"data/{data_num}").reset_index(drop=False)
+    # data_name = data_num.strip('.csv')
+    # file_path = f"result/{data_name}"
+    # os.makedirs(file_path, exist_ok=True)
+    # result = run(data)
+    # draw_graph(result, data_num)
