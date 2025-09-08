@@ -5,6 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from template import *
 import time
+from openai import RateLimitError
 
 load_dotenv()
 api_key = os.getenv("OPEN_API_KEY")
@@ -22,15 +23,20 @@ data_list = os.listdir("data/")
 template = TEMPLATE4
 
 def chatbot(prompt):
-    response = client.chat.completions.create(
-        model="gpt-4.1",
-        messages=[
-            {"role": "user", "content" : f"{template}\n\n 입력문:{prompt}"}
-        ])
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4.1",
+            temperature=0.4,
+            messages=[
+                {"role": "user", "content" : f"{template}\n\n 입력문:{prompt}"}
+            ])
 
-    text = response.choices[0].message.content
+        text = response.choices[0].message.content
 
-    return text
+        return text
+    except RateLimitError as e:
+        print(f"⚠️ RateLimitError 발생 → 문장 스킵: {prompt[:30]}...")
+        return None  # 또는 "에러 발생" 같은 기본 값 반환
 
 def run(data):
 
@@ -46,10 +52,12 @@ def run(data):
         result.append(output)
 
     df_result = pd.DataFrame(result, columns=["result"])
+
     df_result_split = df_result["result"].str.split(",", expand=True)
     df_result_split.columns = ["유형_예측", "극성_예측", "시제_예측", "확실성_예측"]
     df_result = pd.concat([data, df_result_split], axis=1)
     df_result = df_result[["index", "user_prompt", "유형", "유형_예측", "극성", "극성_예측", "시제", "시제_예측", "확실성", "확실성_예측"]]
+
 
     df_result.to_csv(f"{file_path}/result_{data_num}", index=False, encoding="utf-8-sig")
 
@@ -57,7 +65,7 @@ def run(data):
     sum = 0
 
     for i in range(len(df_result)):
-        if df_result['유형_예측'][i] == df_result['유형'][i]:
+        if df_result['시제_예측'][i] == df_result['시제'][i]:
             sum += 1
         if df_result['극성_예측'][i] == df_result['극성'][i]:
             sum += 1
@@ -89,7 +97,7 @@ def draw_graph(data, file_name):
         plt.close()
 
 if __name__ == "__main__":
-    data_list = [s for s in data_list if "긍정" in s]
+    data_list = [s for s in data_list]
     for i in range(len(data_list)):
         data_num = data_list[i]
         data_path = f"data/{data_num}"
