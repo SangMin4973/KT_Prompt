@@ -4,7 +4,6 @@ from openai import OpenAI
 import pandas as pd
 import matplotlib.pyplot as plt
 from template import *
-import time
 from openai import RateLimitError
 
 load_dotenv()
@@ -20,31 +19,32 @@ data_list = os.listdir("data/")
 # file_path = f"result/{data_name}"
 # os.makedirs(file_path, exist_ok=True)
 
-template = TEMPLATE4
+template = TEMPLATE5
+
 
 def chatbot(prompt):
     try:
         response = client.chat.completions.create(
-            model="gpt-4.1",
+            model="gpt-4o",
             temperature=0.4,
             messages=[
                 {"role": "user", "content" : f"{template}\n\n 입력문:{prompt}"}
             ])
 
         text = response.choices[0].message.content
-
         return text
     except RateLimitError as e:
         print(f"⚠️ RateLimitError 발생 → 문장 스킵: {prompt[:30]}...")
         return None  # 또는 "에러 발생" 같은 기본 값 반환
 
-def run(data):
+def run(data, sample_size=100):
 
-    if len(data) > 50:
-        data = data.sample(n=50, random_state=42).reset_index(drop=True)
+    if len(data) > sample_size:
+        data_sample = data.sample(n=sample_size, random_state=42).reset_index(drop=True)
+    else:
+        data_sample = data.copy().reset_index(drop=True)
 
-    sample_input = data['user_prompt']
-    sample_output = data['output']
+    sample_input = data_sample['user_prompt']
     result = []
 
     for i in range(len(sample_input)):
@@ -52,12 +52,10 @@ def run(data):
         result.append(output)
 
     df_result = pd.DataFrame(result, columns=["result"])
-
     df_result_split = df_result["result"].str.split(",", expand=True)
     df_result_split.columns = ["유형_예측", "극성_예측", "시제_예측", "확실성_예측"]
-    df_result = pd.concat([data, df_result_split], axis=1)
+    df_result = pd.concat([data_sample, df_result_split], axis=1)
     df_result = df_result[["index", "user_prompt", "유형", "유형_예측", "극성", "극성_예측", "시제", "시제_예측", "확실성", "확실성_예측"]]
-
 
     df_result.to_csv(f"{file_path}/result_{data_num}", index=False, encoding="utf-8-sig")
 
@@ -65,7 +63,7 @@ def run(data):
     sum = 0
 
     for i in range(len(df_result)):
-        if df_result['시제_예측'][i] == df_result['시제'][i]:
+        if df_result['유형_예측'][i] == df_result['유형'][i]:
             sum += 1
         if df_result['극성_예측'][i] == df_result['극성'][i]:
             sum += 1
@@ -76,7 +74,6 @@ def run(data):
     
     length = len(result) * 4
     print(f"정확도: {sum/length*100}%")
-
     return df_result
 
 plt.rc("font", family="Malgun Gothic")
@@ -97,20 +94,26 @@ def draw_graph(data, file_name):
         plt.close()
 
 if __name__ == "__main__":
-    data_list = [s for s in data_list]
-    for i in range(len(data_list)):
-        data_num = data_list[i]
-        data_path = f"data/{data_num}"
-        data = pd.read_csv(data_path).reset_index(drop=False)
-        data_name = data_num.strip('.csv')
-        file_path = f"result/{data_name}"
-        os.makedirs(file_path, exist_ok=True)
-        result = run(data)
-        draw_graph(result, data_num)
-    # data_num = "추론형_긍정_현재_확실.csv"
-    # data = pd.read_csv(f"data/{data_num}").reset_index(drop=False)
-    # data_name = data_num.strip('.csv')
-    # file_path = f"result/{data_name}"
-    # os.makedirs(file_path, exist_ok=True)
-    # result = run(data)
-    # draw_graph(result, data_num)
+
+    # for i in range(len(data_list)):
+    #     data_num = data_list[i]
+    #     data_path = f"data/{data_num}"
+    #     data = pd.read_csv(data_path).reset_index(drop=False)
+    #     data_name = data_num.strip('.csv')
+    #     file_path = f"result/{data_name}"
+    #     os.makedirs(file_path, exist_ok=True)
+
+    #     result = run(data)
+    #     draw_graph(result, data_num)
+    data_num = "대화형.csv"
+    data = pd.read_csv(f"{data_num}").reset_index(drop=False)
+    data_name = data_num.strip('.csv')
+    file_path = f"result/{data_name}_수정5"
+    os.makedirs(file_path, exist_ok=True)
+    result = run(data)
+    draw_graph(result, data_num)
+    # question = "DPF는 성능보다는 환경 부품이고 장착해서 정기적인 클리닝과 관리를 하면 약 90% 이상의 미세먼지를 줄인다."
+    # result = chatbot(question)
+    # print(f"질문: {question}")
+    # print(f"답변: {result}")
+    
